@@ -3,7 +3,6 @@ import { google } from "googleapis";
 const REQUIRED_ENV_VARS = [
   "FACEBOOK_PAGE_ACCESS_TOKEN",
   "GOOGLE_SHEETS_SPREADSHEET_ID",
-  "GOOGLE_SERVICE_ACCOUNT_JSON",
 ];
 
 for (const envName of REQUIRED_ENV_VARS) {
@@ -18,7 +17,26 @@ const facebookPageAccessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
 const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 const configuredSheetName = process.env.GOOGLE_SHEETS_SHEET_NAME;
 const configuredSheetGid = process.env.GOOGLE_SHEETS_SHEET_GID;
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+
+function loadServiceAccount() {
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64) {
+    const decoded = Buffer.from(
+      process.env.GOOGLE_SERVICE_ACCOUNT_JSON_BASE64,
+      "base64",
+    ).toString("utf8");
+    return JSON.parse(decoded);
+  }
+
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  }
+
+  throw new Error(
+    "Missing required environment variable: GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_JSON_BASE64",
+  );
+}
+
+const serviceAccount = loadServiceAccount();
 
 const headerRow = ["content", "created time", "link", "picture"];
 

@@ -22,7 +22,7 @@ Add these repository secrets in GitHub:
 - `FACEBOOK_PAGE_ACCESS_TOKEN`
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SHEETS_SHEET_GID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`
 
 Optional variables already defaulted in code:
 
@@ -48,7 +48,7 @@ This GitHub workflow uses a Google service account instead of an interactive OAu
 2. Enable the Google Sheets API.
 3. Generate a JSON key for the service account.
 4. Share the target spreadsheet with the service account email as an editor.
-5. Store the full JSON file contents in `GOOGLE_SERVICE_ACCOUNT_JSON`.
+5. Base64-encode the full JSON key and store it in `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64`.
 
 For your current spreadsheet:
 
