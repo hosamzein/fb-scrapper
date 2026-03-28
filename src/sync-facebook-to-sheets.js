@@ -264,18 +264,6 @@ async function syncPostsToSheet(posts) {
     });
   }
 
-  if (appendRows.length > 0) {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `'${sheetName}'!A:D`,
-      valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: {
-        values: appendRows,
-      },
-    });
-  }
-
   return {
     updatedImages: imageUpdates.length,
     sheetName,
