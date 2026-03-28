@@ -38,7 +38,31 @@ function loadServiceAccount() {
 
 const serviceAccount = loadServiceAccount();
 
-const headerRow = ["content", "created time", "link", "picture"];
+const headerRow = [
+  "post content",
+  "post url",
+  "publishing timestamp",
+  "image in post",
+];
+
+function formatTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${day}-${month}-${year} ${hours}:${minutes}`;
+}
 
 function buildFacebookUrl(nextUrl) {
   if (nextUrl) {
@@ -76,9 +100,9 @@ async function fetchFacebookPosts() {
     for (const post of data) {
       posts.push({
         content: post.message || "[Media Only Post]",
-        "created time": post.created_time || "",
-        link: post.permalink_url || "",
-        picture: post.full_picture || "",
+        postUrl: post.permalink_url || "",
+        publishingTimestamp: formatTimestamp(post.created_time),
+        imageInPost: post.full_picture || "",
       });
     }
 
@@ -90,7 +114,7 @@ async function fetchFacebookPosts() {
     await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 
-  return posts.filter((post) => post.link);
+  return posts.filter((post) => post.postUrl);
 }
 
 async function createSheetsClient() {
@@ -169,9 +193,15 @@ async function getExistingRows(sheets, sheetName) {
 
   const values = response.data.values || [];
   const rowByLink = new Map();
+  const headerResponse = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `'${sheetName}'!A1:D1`,
+  });
+  const headers = headerResponse.data.values?.[0] || [];
+  const urlColumnIndex = headers.indexOf("post url") >= 0 ? headers.indexOf("post url") : 2;
 
   values.forEach((row, index) => {
-    const link = row[2];
+    const link = row[urlColumnIndex];
     if (link) {
       rowByLink.set(link, index + 2);
     }
@@ -183,9 +213,9 @@ async function getExistingRows(sheets, sheetName) {
 function toRow(post) {
   return [
     post.content,
-    post["created time"],
-    post.link,
-    post.picture,
+    post.postUrl,
+    post.publishingTimestamp,
+    post.imageInPost,
   ];
 }
 
@@ -200,7 +230,7 @@ async function syncPostsToSheet(posts) {
 
   for (const post of posts) {
     const row = toRow(post);
-    const existingRowNumber = rowByLink.get(post.link);
+    const existingRowNumber = rowByLink.get(post.postUrl);
 
     if (existingRowNumber) {
       updateRows.push({
