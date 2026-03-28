@@ -4,7 +4,7 @@ Migrates the original n8n workflow into a GitHub Actions scheduled job that:
 
 1. Fetches Facebook page posts from the Graph API.
 2. Normalizes media-only posts to `[Media Only Post]`.
-3. Upserts rows into Google Sheets using `link` as the unique key.
+3. Upserts rows into an existing Google Sheets tab using `post url` as the unique key.
 
 ## Workflow schedule
 
@@ -19,6 +19,7 @@ GitHub cron uses UTC. This means the current schedule runs at `00:00 UTC` and `1
 
 Add these repository secrets in GitHub:
 
+- `FACEBOOK_PAGE_ID`
 - `FACEBOOK_PAGE_ACCESS_TOKEN`
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SHEETS_SHEET_GID`
@@ -26,7 +27,6 @@ Add these repository secrets in GitHub:
 
 Optional variables already defaulted in code:
 
-- `FACEBOOK_PAGE_ID` defaults to `463022726904933`
 - `FACEBOOK_API_VERSION` defaults to `v24.0`
 - `GOOGLE_SHEETS_SHEET_NAME` can be used instead of `GOOGLE_SHEETS_SHEET_GID`
 
@@ -53,14 +53,14 @@ This GitHub workflow uses a Google service account instead of an interactive OAu
 For your current spreadsheet:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`: `1Z1BkoqOHMjWugdnkmEdz1octG51oDiVb2_zxmIhy_HM`
-- `GOOGLE_SHEETS_SHEET_GID`: `1309210226`
+- `GOOGLE_SHEETS_SHEET_GID`: `2144150873`
 
-The script writes these columns:
+The script writes these columns to the existing target tab:
 
-- `content`
-- `created time`
-- `link`
-- `picture`
+- `post content`
+- `post url`
+- `publishing timestamp`
+- `image in post`
 
 ## Local run
 

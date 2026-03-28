@@ -45,6 +45,30 @@ const headerRow = [
   "image in post",
 ];
 
+function extractImageUrl(post) {
+  if (post.full_picture) {
+    return post.full_picture;
+  }
+
+  const attachmentItems = post.attachments?.data || [];
+  for (const attachment of attachmentItems) {
+    const mediaImage = attachment.media?.image?.src;
+    if (mediaImage) {
+      return mediaImage;
+    }
+
+    const subattachments = attachment.subattachments?.data || [];
+    for (const subattachment of subattachments) {
+      const subattachmentImage = subattachment.media?.image?.src;
+      if (subattachmentImage) {
+        return subattachmentImage;
+      }
+    }
+  }
+
+  return "";
+}
+
 function formatTimestamp(value) {
   if (!value) {
     return "";
@@ -102,7 +126,7 @@ async function fetchFacebookPosts() {
         content: post.message || "[Media Only Post]",
         postUrl: post.permalink_url || "",
         publishingTimestamp: formatTimestamp(post.created_time),
-        imageInPost: post.full_picture || "",
+        imageInPost: extractImageUrl(post),
       });
     }
 
@@ -198,7 +222,8 @@ async function getExistingRows(sheets, sheetName) {
     range: `'${sheetName}'!A1:D1`,
   });
   const headers = headerResponse.data.values?.[0] || [];
-  const urlColumnIndex = headers.indexOf("post url") >= 0 ? headers.indexOf("post url") : 2;
+  const urlColumnIndex =
+    headers.indexOf("post url") >= 0 ? headers.indexOf("post url") : 1;
 
   values.forEach((row, index) => {
     const link = row[urlColumnIndex];
