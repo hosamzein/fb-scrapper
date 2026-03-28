@@ -235,6 +235,15 @@ async function getExistingRows(sheets, sheetName) {
   return rowByLink;
 }
 
+function toRow(post) {
+  return [
+    post.content,
+    post.postUrl,
+    post.publishingTimestamp,
+    post.imageInPost,
+  ];
+}
+
 async function syncPostsToSheet(posts) {
   const sheets = await createSheetsClient();
   const sheetName = await resolveSheetName(sheets);
@@ -248,8 +257,8 @@ async function syncPostsToSheet(posts) {
 
     if (existingRowNumber) {
       fieldUpdates.push({
-        range: `'${sheetName}'!C${existingRowNumber}:D${existingRowNumber}`,
-        values: [[post.publishingTimestamp, post.imageInPost]],
+        range: `'${sheetName}'!A${existingRowNumber}:D${existingRowNumber}`,
+        values: [toRow(post)],
       });
     }
   }
