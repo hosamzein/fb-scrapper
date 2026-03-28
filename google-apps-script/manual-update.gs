@@ -13,8 +13,11 @@ function onOpen() {
 function runFacebookSyncFromSheet() {
   const scriptProperties = PropertiesService.getScriptProperties();
   const githubToken = scriptProperties.getProperty('GITHUB_TOKEN');
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
   if (!githubToken) {
+    sheet.getRange('A1').setValue('Missing GITHUB_TOKEN');
+    sheet.getRange('B1').setValue(new Date());
     throw new Error(
       'Missing GITHUB_TOKEN in Apps Script properties. Set it before running.',
     );
@@ -31,7 +34,6 @@ function runFacebookSyncFromSheet() {
   }
 
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     sheet.getRange('A1').setValue('Updating...');
     sheet.getRange('B1').setValue(new Date());
 
@@ -65,6 +67,15 @@ function runFacebookSyncFromSheet() {
       'Facebook Sync',
       5,
     );
+  } catch (error) {
+    sheet.getRange('A1').setValue('Update failed');
+    sheet.getRange('B1').setValue(new Date());
+    SpreadsheetApp.getActive().toast(
+      `Trigger failed: ${error.message}`,
+      'Facebook Sync',
+      8,
+    );
+    throw error;
   } finally {
     lock.releaseLock();
   }
