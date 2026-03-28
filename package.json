@@ -1,0 +1,15 @@
+{
+  "name": "fb-scrapper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "sync:facebook-to-sheets": "node src/sync-facebook-to-sheets.js"
+  },
+  "dependencies": {
+    "googleapis": "^150.0.1"
+  }
+}
