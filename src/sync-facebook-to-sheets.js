@@ -235,22 +235,12 @@ async function getExistingRows(sheets, sheetName) {
   return rowByLink;
 }
 
-function toRow(post) {
-  return [
-    post.content,
-    post.postUrl,
-    post.publishingTimestamp,
-    post.imageInPost,
-  ];
-}
-
 async function syncPostsToSheet(posts) {
   const sheets = await createSheetsClient();
   const sheetName = await resolveSheetName(sheets);
   await ensureSheetHeaders(sheets, sheetName);
 
   const rowByLink = await getExistingRows(sheets, sheetName);
-  const appendRows = [];
   const imageUpdates = [];
 
   for (const post of posts) {
@@ -261,10 +251,7 @@ async function syncPostsToSheet(posts) {
         range: `'${sheetName}'!D${existingRowNumber}`,
         values: [[post.imageInPost]],
       });
-      continue;
     }
-
-    appendRows.push(toRow(post));
   }
 
   if (imageUpdates.length > 0) {
@@ -291,7 +278,6 @@ async function syncPostsToSheet(posts) {
 
   return {
     updatedImages: imageUpdates.length,
-    appended: appendRows.length,
     sheetName,
   };
 }
@@ -305,7 +291,6 @@ async function main() {
       {
         fetched: posts.length,
         updatedImages: result.updatedImages,
-        appended: result.appended,
         pageId: facebookPageId,
         sheetName: result.sheetName,
       },
