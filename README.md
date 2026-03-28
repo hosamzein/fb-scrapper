@@ -72,3 +72,25 @@ npm run sync:facebook-to-sheets
 ```
 
 Required environment variables are the same as the GitHub secrets listed above.
+
+## Google Sheets manual trigger
+
+You can trigger the GitHub workflow manually from the spreadsheet with Google Apps Script.
+
+Use [manual-update.gs](D:\projects\fb-scrapper\google-apps-script\manual-update.gs) as the script source.
+
+Setup steps:
+
+1. Open the target Google Sheet.
+2. Go to `Extensions` -> `Apps Script`.
+3. Paste the contents of `google-apps-script/manual-update.gs`.
+4. In Apps Script, open `Project Settings` -> `Script properties`.
+5. Add `GITHUB_TOKEN` with a GitHub token that can trigger Actions in `hosamzein/fb-scrapper`.
+6. Save and run `onOpen` once to authorize the script.
+7. Reload the sheet and use the `Facebook Sync` menu -> `Run Manual Update`.
+
+If you want a clickable button in the sheet header:
+
+1. Insert a drawing or image in row 1.
+2. Assign the script `runFacebookSyncFromSheet` to that drawing.
+3. The script writes status to cells `A1` and `B1`.
