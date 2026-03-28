@@ -196,31 +196,31 @@ async function syncPostsToSheet(posts) {
 
   const rowByLink = await getExistingRows(sheets, sheetName);
   const appendRows = [];
-  const updateRequests = [];
+  const updateRows = [];
 
   for (const post of posts) {
     const row = toRow(post);
     const existingRowNumber = rowByLink.get(post.link);
 
     if (existingRowNumber) {
-      updateRequests.push(
-        sheets.spreadsheets.values.update({
-          spreadsheetId,
-          range: `'${sheetName}'!A${existingRowNumber}:D${existingRowNumber}`,
-          valueInputOption: "RAW",
-          requestBody: {
-            values: [row],
-          },
-        }),
-      );
+      updateRows.push({
+        range: `'${sheetName}'!A${existingRowNumber}:D${existingRowNumber}`,
+        values: [row],
+      });
       continue;
     }
 
     appendRows.push(row);
   }
 
-  if (updateRequests.length > 0) {
-    await Promise.all(updateRequests);
+  if (updateRows.length > 0) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        valueInputOption: "RAW",
+        data: updateRows,
+      },
+    });
   }
 
   if (appendRows.length > 0) {
@@ -236,7 +236,7 @@ async function syncPostsToSheet(posts) {
   }
 
   return {
-    updated: updateRequests.length,
+    updated: updateRows.length,
     appended: appendRows.length,
     sheetName,
   };
