@@ -251,29 +251,28 @@ async function syncPostsToSheet(posts) {
 
   const rowByLink = await getExistingRows(sheets, sheetName);
   const appendRows = [];
-  const updateRows = [];
+  const imageUpdates = [];
 
   for (const post of posts) {
-    const row = toRow(post);
     const existingRowNumber = rowByLink.get(post.postUrl);
 
     if (existingRowNumber) {
-      updateRows.push({
-        range: `'${sheetName}'!A${existingRowNumber}:D${existingRowNumber}`,
-        values: [row],
+      imageUpdates.push({
+        range: `'${sheetName}'!D${existingRowNumber}`,
+        values: [[post.imageInPost]],
       });
       continue;
     }
 
-    appendRows.push(row);
+    appendRows.push(toRow(post));
   }
 
-  if (updateRows.length > 0) {
+  if (imageUpdates.length > 0) {
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
       requestBody: {
         valueInputOption: "RAW",
-        data: updateRows,
+        data: imageUpdates,
       },
     });
   }
@@ -291,7 +290,7 @@ async function syncPostsToSheet(posts) {
   }
 
   return {
-    updated: updateRows.length,
+    updatedImages: imageUpdates.length,
     appended: appendRows.length,
     sheetName,
   };
@@ -305,7 +304,7 @@ async function main() {
     JSON.stringify(
       {
         fetched: posts.length,
-        updated: result.updated,
+        updatedImages: result.updatedImages,
         appended: result.appended,
         pageId: facebookPageId,
         sheetName: result.sheetName,
