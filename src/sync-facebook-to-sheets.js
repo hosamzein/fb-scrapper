@@ -39,11 +39,29 @@ function loadServiceAccount() {
 const serviceAccount = loadServiceAccount();
 
 const headerRow = [
+  "id",
   "post content",
   "post url",
   "publishing timestamp",
+  "timestamp",
   "image in post",
 ];
+
+function getColumnLetter(columnNumber) {
+  let dividend = columnNumber;
+  let columnName = "";
+
+  while (dividend > 0) {
+    const modulo = (dividend - 1) % 26;
+    columnName = String.fromCharCode(65 + modulo) + columnName;
+    dividend = Math.floor((dividend - modulo) / 26);
+  }
+
+  return columnName;
+}
+
+const firstColumn = "A";
+const lastColumn = getColumnLetter(headerRow.length);
 
 function extractImageUrl(post) {
   if (post.full_picture) {
@@ -88,6 +106,19 @@ function formatTimestamp(value) {
   return `${day}-${month}-${year} ${hours}:${minutes}`;
 }
 
+function getTimestampMillis(value) {
+  if (!value) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  return timestamp;
+}
+
 function buildFacebookUrl(nextUrl) {
   if (nextUrl) {
     return nextUrl;
@@ -126,6 +157,7 @@ async function fetchFacebookPosts() {
         content: post.message || "[Media Only Post]",
         postUrl: post.permalink_url || "",
         publishingTimestamp: formatTimestamp(post.created_time),
+        timestamp: post.created_time || "",
         imageInPost: extractImageUrl(post),
       });
     }
@@ -185,7 +217,7 @@ async function resolveSheetName(sheets) {
 }
 
 async function ensureSheetHeaders(sheets, sheetName) {
-  const range = `'${sheetName}'!A1:D1`;
+  const range = `'${sheetName}'!${firstColumn}1:${lastColumn}1`;
   const existing = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range,
@@ -209,7 +241,7 @@ async function ensureSheetHeaders(sheets, sheetName) {
 }
 
 async function getExistingRows(sheets, sheetName) {
-  const range = `'${sheetName}'!A2:D`;
+  const range = `'${sheetName}'!${firstColumn}2:${lastColumn}`;
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range,
@@ -219,7 +251,7 @@ async function getExistingRows(sheets, sheetName) {
   const rowByLink = new Map();
   const headerResponse = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `'${sheetName}'!A1:D1`,
+    range: `'${sheetName}'!${firstColumn}1:${lastColumn}1`,
   });
   const headers = headerResponse.data.values?.[0] || [];
   const urlColumnIndex =
@@ -237,11 +269,83 @@ async function getExistingRows(sheets, sheetName) {
 
 function toRow(post) {
   return [
+    post.id ?? "",
     post.content,
     post.postUrl,
     post.publishingTimestamp,
+    post.timestamp,
     post.imageInPost,
   ];
+}
+
+function fromRow(row) {
+  return {
+    id: row[0] || "",
+    content: row[1] || "",
+    postUrl: row[2] || "",
+    publishingTimestamp: row[3] || "",
+    timestamp: row[4] || "",
+    imageInPost: row[5] || "",
+  };
+}
+
+function sortPostsNewestToOldest(posts) {
+  return [...posts].sort((left, right) => {
+    const rightTimestamp = getTimestampMillis(right.timestamp);
+    const leftTimestamp = getTimestampMillis(left.timestamp);
+
+    if (rightTimestamp !== leftTimestamp) {
+      return rightTimestamp - leftTimestamp;
+    }
+
+    return left.postUrl.localeCompare(right.postUrl);
+  });
+}
+
+function assignIdsFromOldest(posts) {
+  const oldestToNewest = [...posts].reverse();
+
+  oldestToNewest.forEach((post, index) => {
+    post.id = String(index + 1);
+  });
+
+  return oldestToNewest.reverse();
+}
+
+async function rewriteSheetRows(sheets, sheetName) {
+  const range = `'${sheetName}'!${firstColumn}2:${lastColumn}`;
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range,
+  });
+
+  const sortedPosts = sortPostsNewestToOldest(
+    (response.data.values || [])
+      .map((row) => fromRow(row))
+      .filter((post) => post.postUrl),
+  );
+  const normalizedPosts = assignIdsFromOldest(sortedPosts);
+  const values = normalizedPosts.map((post) => toRow(post));
+
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range,
+  });
+
+  if (values.length === 0) {
+    return { rewrittenRows: 0 };
+  }
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!${firstColumn}2:${lastColumn}${values.length + 1}`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values,
+    },
+  });
+
+  return { rewrittenRows: values.length };
 }
 
 async function syncPostsToSheet(posts) {
@@ -251,16 +355,20 @@ async function syncPostsToSheet(posts) {
 
   const rowByLink = await getExistingRows(sheets, sheetName);
   const fieldUpdates = [];
+  const rowsToAppend = [];
 
   for (const post of posts) {
     const existingRowNumber = rowByLink.get(post.postUrl);
 
     if (existingRowNumber) {
       fieldUpdates.push({
-        range: `'${sheetName}'!A${existingRowNumber}:D${existingRowNumber}`,
+        range: `'${sheetName}'!${firstColumn}${existingRowNumber}:${lastColumn}${existingRowNumber}`,
         values: [toRow(post)],
       });
+      continue;
     }
+
+    rowsToAppend.push(toRow(post));
   }
 
   if (fieldUpdates.length > 0) {
@@ -273,7 +381,23 @@ async function syncPostsToSheet(posts) {
     });
   }
 
+  if (rowsToAppend.length > 0) {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `'${sheetName}'!${firstColumn}:${lastColumn}`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: {
+        values: rowsToAppend,
+      },
+    });
+  }
+
+  const rewritten = await rewriteSheetRows(sheets, sheetName);
+
   return {
+    appendedRows: rowsToAppend.length,
+    rewrittenRows: rewritten.rewrittenRows,
     updatedRows: fieldUpdates.length,
     sheetName,
   };
@@ -287,6 +411,8 @@ async function main() {
     JSON.stringify(
       {
         fetched: posts.length,
+        appendedRows: result.appendedRows,
+        rewrittenRows: result.rewrittenRows,
         updatedRows: result.updatedRows,
         pageId: facebookPageId,
         sheetName: result.sheetName,

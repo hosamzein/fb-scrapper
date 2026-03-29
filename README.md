@@ -11,9 +11,9 @@ Migrates the original n8n workflow into a GitHub Actions scheduled job that:
 The GitHub Actions workflow runs on:
 
 - Manual trigger: `workflow_dispatch`
-- Cron: `0 */12 * * *`
+- Cron: `0 0 * * *`
 
-GitHub cron uses UTC. This means the current schedule runs at `00:00 UTC` and `12:00 UTC` every day.
+GitHub cron uses UTC. This means the current schedule runs once per day at `00:00 UTC`.
 
 ## Required GitHub secrets
 
@@ -89,8 +89,17 @@ Setup steps:
 6. Save and run `onOpen` once to authorize the script.
 7. Reload the sheet and use the `Facebook Sync` menu -> `Run Manual Update`.
 
+The script creates a dedicated tab named `Facebook Sync Status` and writes:
+
+- `A1:C1`: headers for the status table
+- `A2`: current status
+- `B2`: last updated time
+- `C2`: GitHub Actions run URL
+
+The manual trigger now waits for the GitHub workflow to finish and reports whether it completed successfully.
+
 If you want a clickable button in the sheet header:
 
 1. Insert a drawing or image in row 1.
 2. Assign the script `runFacebookSyncFromSheet` to that drawing.
-3. The script writes status to cells `A1` and `B1`.
+3. The script writes status to the `Facebook Sync Status` tab instead of the data sheet header row.
